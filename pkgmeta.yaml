@@ -1,0 +1,17 @@
+ignore:
+  - README.md
+  - CHANGES.txt
+  - LICENSE.md
+  - preview.png
+
+license-output: LICENSE.txt
+
+enable-nolib-creation: no
+
+externals:
+  libs\LibQuestXP:
+    url: https://github.com/MrFox42/libquestxp.git
+    tag: latest
+  libs\LibQuestXP\libs\LibStub:
+    url: https://repos.wowace.com/wow/libstub/trunk
+    tag: latest
