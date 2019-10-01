@@ -3,7 +3,6 @@ ignore:
   - CHANGES.txt
   - LICENSE.md
   - pics
-  - libs
 
 license-output: LICENSE.txt
 
