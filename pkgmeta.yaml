@@ -2,7 +2,6 @@ ignore:
   - README.md
   - CHANGES.txt
   - LICENSE.md
-  - *.png
   - pics
   - libs
 
