@@ -2,7 +2,8 @@ ignore:
   - README.md
   - CHANGES.txt
   - LICENSE.md
-  - preview.png
+  - *.png
+  - pics
 
 license-output: LICENSE.txt
 
