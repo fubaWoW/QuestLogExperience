@@ -1,8 +1,8 @@
 ## Interface: 11302
+## Version: @project-version@
 ## Title: QuestLog Experience
-## Version: 11302.01
 ## Author: fuba
-## Notes: Adds Quest Advanced Experience to the Quest Description
+## Notes: Adds an Advanced Quest Experience Function to the Quest Description
 
 libs\LibQuestXP\LibQuestXP.xml
 QuestLogExperience.lua
