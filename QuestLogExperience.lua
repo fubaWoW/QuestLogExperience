@@ -3,6 +3,7 @@ local AddOnName, AddOn = ...
 local isClassicWow = select(4,GetBuildInfo()) < 20000
 local LibQuestXP = LibStub:GetLibrary("LibQuestXP-1.0", true)
 local gLevel = _G.LEVEL
+if not LibQuestXP then return end
 
 local textColor = {1, 1, 1}
 local titleTextColor = {1, 0.80, 0.10}
@@ -10,7 +11,6 @@ local titleTextColor = {1, 0.80, 0.10}
 local maxPlayerLevel = 60;
 
 local QLRTT_point, QLRTT_relativeTo, QLRTT_relativePoint, QLRTT_xOfs, QLRTT_yOfs = QuestLogRewardTitleText:GetPoint()
-
 
 local function round(num, numDecimalPlaces)
   return tonumber(string.format("%." .. (numDecimalPlaces or 0) .. "f", num))
@@ -83,6 +83,10 @@ local function CreateSlider(g_name, parent, title, min_val, max_val, val_step, f
 		self:SetBackdropBorderColor(0.3, 0.3, 0.3, 0.8)
 	end)
 	
+	slider:HookScript("OnMouseDown", function(self, btn)
+		editbox:ClearFocus()
+	end)
+	
 	slider:SetScript("OnValueChanged", function(self)
 			editbox:SetText(tostring((floor(self:GetValue() / val_step) * val_step)))
 			if func then func(self) end
@@ -102,8 +106,8 @@ local function CreateSlider(g_name, parent, title, min_val, max_val, val_step, f
 	return slider
 end
 
-
 function GetAdjustedXPByLevel(charLevel, xp, qLevel)
+		if (charLevel >= 60) then return 0 end
     local diffFactor = 2 * (qLevel - charLevel) + 20;
     if (diffFactor < 1) then
         diffFactor = 1;
@@ -131,7 +135,7 @@ QuestLogExperienceTitleText:SetJustifyH ("LEFT")
 local QuestLogExperienceText = QuestLogDetailScrollChildFrame:CreateFontString("QuestLogExperienceText", "ARTWORK", "QuestFont")
 QuestLogExperienceText:SetJustifyH ("LEFT")
 
-local Slider_minVal = UnitLevel("player")-10
+local Slider_minVal = ((UnitLevel("player")-10 > 0 and UnitLevel("player")-10) or 1)
 local Slider_maxVal = ((UnitLevel("player")+10 < 61 and UnitLevel("player")+10) or maxPlayerLevel)
 local QuestLogExperienceSlider = CreateSlider("QuestLogExperienceSlider", QuestLogDetailScrollChildFrame, "", Slider_minVal, Slider_maxVal, 1, nil)
 
@@ -140,6 +144,7 @@ XpResetButton:SetAllPoints(QuestLogExperienceTitleText)
 XpResetButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 XpResetButton:SetScript("OnClick", function()
 	QuestLogExperienceSlider:SetValue(UnitLevel("player"))
+	QuestLogExperienceSlider.editbox:ClearFocus()
 end)
 
 if ElvUI then
@@ -170,7 +175,7 @@ hooksecurefunc('QuestLog_UpdateQuestDetails', function()
 		if not questXP or questXP == 0 then questXP = GetQuestLogRewardXP(questID) end
 		if not questXP or questXP == 0 then return end
 
-		if questXP > 0 then
+		if questXP > 0 then			
 			QuestLogExperienceTitleText:SetText(COMBAT_XP_GAIN)
 			QuestLogExperienceTitleText:Hide()
 			QuestLogExperienceTitleText:ClearAllPoints()
@@ -180,7 +185,7 @@ hooksecurefunc('QuestLog_UpdateQuestDetails', function()
 			local PlayerMaxXP = UnitXPMax("player")
 			local charLevel = UnitLevel("player");
 			local QuestXPPerc = questXP / (PlayerMaxXP / 100)
-			Slider_minVal = UnitLevel("player")-10
+			Slider_minVal = (UnitLevel("player")-10 > 0 and UnitLevel("player")-10) or 1
 			Slider_maxVal = (LoseLevel+4 < 61 and LoseLevel+4) or maxPlayerLevel
 
 			QuestLogExperienceText:SetText(gLevel.." "..charLevel..": "..questXP.." ("..round(QuestXPPerc, 2).."%)");
@@ -194,6 +199,7 @@ hooksecurefunc('QuestLog_UpdateQuestDetails', function()
 			QuestLogExperienceSlider.textLow:SetText(floor(Slider_minVal))
 			QuestLogExperienceSlider.textHigh:SetText(floor(Slider_maxVal))
 			QuestLogExperienceSlider.editbox:SetText(charLevel)
+			QuestLogExperienceSlider.editbox:ClearFocus()
 			QuestLogExperienceSlider:SetValue(charLevel)
 			QuestLogExperienceSlider:HookScript("OnValueChanged", function(self, value)
 				local slider_questXP = GetAdjustedXPByLevel(value, xp, qLevel)
@@ -203,8 +209,7 @@ hooksecurefunc('QuestLog_UpdateQuestDetails', function()
 			end)
 
 			if QuestLogRewardTitleText:IsShown() then
-				point, relativeTo, relativePoint, xOfs, yOfs = QuestLogRewardTitleText:GetPoint()
-				QuestLogRewardTitleText:SetPoint(point, QuestLogExperienceSlider, relativePoint, xOfs, QLRTT_yOfs-10)
+				QuestLogRewardTitleText:SetPoint(QLRTT_point, QuestLogExperienceSlider, QLRTT_relativePoint, QLRTT_xOfs, QLRTT_yOfs-10)
 			end
 
 			if questXP and (questXP > 0) then
