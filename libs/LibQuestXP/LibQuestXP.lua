@@ -1,8 +1,12 @@
-local MAJOR, MINOR = "LibQuestXP-1.0", 1
+local MAJOR, MINOR = "LibQuestXP-1.0", 7
 local LibQuestXP = LibStub:NewLibrary(MAJOR, MINOR)
 
+if _G.WOW_PROJECT_ID == _G.WOW_PROJECT_MAINLINE then
+    return -- Don't load for Retail
+end
+
 if not LibQuestXP then
-    return	-- already loaded and no upgrade necessary
+    return -- already loaded and no upgrade necessary
 end
 
 local selectedQuestLogIndex = nil
@@ -22,6 +26,9 @@ end
 
 function LibQuestXP:GetAdjustedXP(xp, qLevel)
     local charLevel = UnitLevel("player");
+    if (charLevel == 60) then
+        return 0;
+    end
 
     local diffFactor = 2 * (qLevel - charLevel) + 20;
     if (diffFactor < 1) then
