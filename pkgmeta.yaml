@@ -4,6 +4,7 @@ ignore:
   - LICENSE.md
   - *.png
   - pics
+  - libs
 
 license-output: LICENSE.txt
 
