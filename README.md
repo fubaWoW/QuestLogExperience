@@ -2,6 +2,14 @@
 This AddOn adds an **Advanced** Quest Experience Function to the Quest Description  
 There is a Slider and an EditBox for the Level you want to know how many Experience Points you get at the selected Level!
 
+Added Colored Quest Level Text and Command Line to toggle it.  
+
+| Slash Command | Description                     |
+|:-------------|:---------------------------------|
+| /qle          | Show all available command      |
+| /qle color    | Toggle Colored Quest Level Text |
+  
+  
 This AddOn is Insired by the WowHead Experience at Level Slider.  
 This AddOn **requies** [LibQuestXP (Classic)](https://github.com/MrFox42/libquestxp) to work.  
 At this Point **many** thanks to MisterFox for this nice Lib!  
