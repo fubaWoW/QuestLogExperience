@@ -174,7 +174,7 @@ SlashCmdList[AddOnName] = function(msg)
 	local cmd = ""
 	if msg and type(msg) == "string" then cmd = msg end
 	if cmd ~= "" then
-		if cmd == "colored" then
+		if cmd == "color" or cmd == "colored" then
 			if QuestLogExperienceDB.ColorLevelByDifficulty then
 				QuestLogExperienceDB.ColorLevelByDifficulty = false
 				AddOnPrint("Colored Quest Level Text is now disabled.")
