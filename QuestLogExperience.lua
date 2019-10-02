@@ -1,9 +1,18 @@
 local AddOnName, AddOn = ...
 
-local isClassicWow = select(4,GetBuildInfo()) < 20000
 local LibQuestXP = LibStub:GetLibrary("LibQuestXP-1.0", true)
-local gLevel = _G.LEVEL
 if not LibQuestXP then return end
+
+local isClassicWow = select(4,GetBuildInfo()) < 20000
+local gLevel = _G.LEVEL
+local gLoss = _G.LOSS
+local gExperience = _G.COMBAT_XP_GAIN
+
+if not QuestLogExperienceDB then
+	QuestLogExperienceDB = {
+		ColorLevelByDifficulty = true,
+	}
+end
 
 local textColor = {1, 1, 1}
 local titleTextColor = {1, 0.80, 0.10}
@@ -14,6 +23,10 @@ local QLRTT_point, QLRTT_relativeTo, QLRTT_relativePoint, QLRTT_xOfs, QLRTT_yOfs
 
 local function round(num, numDecimalPlaces)
   return tonumber(string.format("%." .. (numDecimalPlaces or 0) .. "f", num))
+end
+
+local function AddOnPrint(msg)
+	(SELECTED_CHAT_FRAME or DEFAULT_CHAT_FRAME):AddMessage("|cffffff78QLE: |r"..msg)
 end
 
 local function CreateSlider(g_name, parent, title, min_val, max_val, val_step, func)
@@ -133,30 +146,53 @@ local QuestLogExperienceTitleText = QuestLogDetailScrollChildFrame:CreateFontStr
 QuestLogExperienceTitleText:SetJustifyH ("LEFT")
 
 local QuestLogExperienceText = QuestLogDetailScrollChildFrame:CreateFontString("QuestLogExperienceText", "ARTWORK", "QuestFont")
+QuestLogExperienceText:SetShadowOffset(1,-1)
 QuestLogExperienceText:SetJustifyH ("LEFT")
+--QuestLogExperienceText:SetTextColor(0.30, 0.18, 0.00, 1.00)
 
 local Slider_minVal = ((UnitLevel("player")-10 > 0 and UnitLevel("player")-10) or 1)
-local Slider_maxVal = ((UnitLevel("player")+10 < 61 and UnitLevel("player")+10) or maxPlayerLevel)
+local Slider_maxVal = ((UnitLevel("player")+10 < 60 and UnitLevel("player")+10) or (maxPlayerLevel-1))
 local QuestLogExperienceSlider = CreateSlider("QuestLogExperienceSlider", QuestLogDetailScrollChildFrame, "", Slider_minVal, Slider_maxVal, 1, nil)
 
 local XpResetButton = CreateFrame("Button", nil, QuestLogDetailScrollChildFrame)
 XpResetButton:SetAllPoints(QuestLogExperienceTitleText)
 XpResetButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-XpResetButton:SetScript("OnClick", function()
-	QuestLogExperienceSlider:SetValue(UnitLevel("player"))
-	QuestLogExperienceSlider.editbox:ClearFocus()
-end)
 
 if ElvUI then
 	QuestLogExperienceTitleText:SetTextColor(unpack(titleTextColor))
 	QuestLogExperienceText:SetTextColor(unpack(textColor))
 end
 
-hooksecurefunc('QuestLog_UpdateQuestDetails', function()
+local function usage()
+    ChatFrame1:AddMessage(L["|cff0080ffQLE |r/qle |cff0080ffUsage:|r"])
+    ChatFrame1:AddMessage(L["|cff0080ff/qle color|r - Toggle Colored Quest Level Text"])
+end
 
+_G['SLASH_' .. AddOnName .. 1] = '/qle'
+_G['SLASH_' .. AddOnName .. 2] = '/questlogexperience'
+SlashCmdList[AddOnName] = function(msg)
+	local cmd = ""
+	if msg and type(msg) == "string" then cmd = msg end
+	if cmd ~= "" then
+		if cmd == "colored" then
+			if QuestLogExperienceDB.ColorLevelByDifficulty then
+				QuestLogExperienceDB.ColorLevelByDifficulty = false
+				AddOnPrint("Colored Quest Level Text is now disabled.")
+			else
+				QuestLogExperienceDB.ColorLevelByDifficulty = true
+				AddOnPrint("Colored Quest Level Text is now enabled.")
+			end
+		end
+	else
+		ChatFrame1:AddMessage("|cffffff78QuestLogExperience |r/qle |cffffff78Usage:|r")
+		ChatFrame1:AddMessage("|cffffff78/qle colored|r - Toggle Colored Quest Level Text")
+	end
+end
+
+hooksecurefunc('QuestLog_UpdateQuestDetails', function()
 	local questSelected = GetQuestLogSelection()
 	local questTitle, level, questTag, isHeader, isCollapsed, isComplete, frequency, questID, startEvent, displayQuestID, isOnMap, hasLocalPOI, isTask, isBounty, isStory, isHidden, isScaling = GetQuestLogTitle(questSelected)
-	if not isHeader and (tonumber(level) > 0) and (questID > 0) then
+	if not isHeader and (tonumber(level) > 0) and (questID > 0) then	
 		local xp, qLevel = LibQuestXP:GetQuestInfo(questID)
 		local maxXP = GetAdjustedXPByLevel(1, xp, qLevel)
 
@@ -167,6 +203,7 @@ hooksecurefunc('QuestLog_UpdateQuestDetails', function()
 			local curXP = GetAdjustedXPByLevel(testlevel, xp, qLevel)
 			if curXP < maxXP then
 				LoseLevel = testlevel
+				LoseLevelXP = curXP
 				break
 			end
 		end
@@ -176,7 +213,7 @@ hooksecurefunc('QuestLog_UpdateQuestDetails', function()
 		if not questXP or questXP == 0 then return end
 
 		if questXP > 0 then			
-			QuestLogExperienceTitleText:SetText(COMBAT_XP_GAIN)
+			QuestLogExperienceTitleText:SetText(gExperience)
 			QuestLogExperienceTitleText:Hide()
 			QuestLogExperienceTitleText:ClearAllPoints()
 			QuestLogExperienceTitleText:SetPoint("TOPLEFT", QuestLogQuestDescription, "BOTTOMLEFT", 0, -15)
@@ -186,9 +223,8 @@ hooksecurefunc('QuestLog_UpdateQuestDetails', function()
 			local charLevel = UnitLevel("player");
 			local QuestXPPerc = questXP / (PlayerMaxXP / 100)
 			Slider_minVal = (UnitLevel("player")-10 > 0 and UnitLevel("player")-10) or 1
-			Slider_maxVal = (LoseLevel+4 < 61 and LoseLevel+4) or maxPlayerLevel
+			Slider_maxVal = (LoseLevel+4 < 60 and LoseLevel+4) or (maxPlayerLevel-1)
 
-			QuestLogExperienceText:SetText(gLevel.." "..charLevel..": "..questXP.." ("..round(QuestXPPerc, 2).."%)");
 			QuestLogExperienceText:ClearAllPoints()
 			QuestLogExperienceText:SetPoint("TOPLEFT", QuestLogExperienceTitleText, "BOTTOMLEFT", 0, -5)
 			
@@ -201,22 +237,51 @@ hooksecurefunc('QuestLog_UpdateQuestDetails', function()
 			QuestLogExperienceSlider.editbox:SetText(charLevel)
 			QuestLogExperienceSlider.editbox:ClearFocus()
 			QuestLogExperienceSlider:SetValue(charLevel)
+			
+			XpResetButton:SetScript("OnClick", function(self, btn)
+				if btn == "RightButton" then
+					QuestLogExperienceSlider:SetValue(LoseLevel)
+					QuestLogExperienceSlider.editbox:ClearFocus()
+				else
+					QuestLogExperienceSlider:SetValue(UnitLevel("player"))
+					QuestLogExperienceSlider.editbox:ClearFocus()
+				end
+			end)
+			
+			local diffcolor = GetRelativeDifficultyColor(charLevel, level)
+			local coloredlevel = charLevel
+			local colortext = gLevel.." "..charLevel..": "..questXP.." ("..round(QuestXPPerc, 2).."%)"
+			if QuestLogExperienceDB.ColorLevelByDifficulty then
+				coloredlevel = format("\124cff%.2x%.2x%.2x%d\124r", diffcolor.r*255, diffcolor.g*255, diffcolor.b*255, charLevel)
+				colortext = format("\124cff%.2x%.2x%.2x%s\124r", diffcolor.r*255, diffcolor.g*255, diffcolor.b*255, colortext)
+			end
+			QuestLogExperienceText:SetText(colortext);
+			
 			QuestLogExperienceSlider:HookScript("OnValueChanged", function(self, value)
 				local slider_questXP = GetAdjustedXPByLevel(value, xp, qLevel)
 				local slider_PlayerMaxXP = UnitXPMax("player")
 				local slider_XPPerc = slider_questXP / (slider_PlayerMaxXP / 100)
-				QuestLogExperienceText:SetText(gLevel.." "..value..": "..slider_questXP.." ("..round(slider_XPPerc, 2).."%)");
+				diffcolor = GetRelativeDifficultyColor(value, level)
+				coloredlevel = value
+				colortext = gLevel.." "..value..": "..slider_questXP.." ("..round(slider_XPPerc, 2).."%)"
+				if QuestLogExperienceDB.ColorLevelByDifficulty then
+					coloredlevel = format("\124cff%.2x%.2x%.2x%d\124r", diffcolor.r*255, diffcolor.g*255, diffcolor.b*255, value)
+					colortext = format("\124cff%.2x%.2x%.2x%s\124r", diffcolor.r*255, diffcolor.g*255, diffcolor.b*255, colortext)
+				end				
+				QuestLogExperienceText:SetText(colortext);
+				
 			end)
-
-			if QuestLogRewardTitleText:IsShown() then
-				QuestLogRewardTitleText:SetPoint(QLRTT_point, QuestLogExperienceSlider, QLRTT_relativePoint, QLRTT_xOfs, QLRTT_yOfs-10)
-			end
 
 			if questXP and (questXP > 0) then
 				QuestLogExperienceTitleText:Show()
 				QuestFrame_SetAsLastShown(QuestLogExperienceSlider)
 			else
 				QuestLogExperienceTitleText:Hide()
+			end
+			
+			if QuestLogRewardTitleText:IsShown() then
+				QuestLogRewardTitleText:SetPoint(QLRTT_point, QuestLogExperienceSlider, QLRTT_relativePoint, QLRTT_xOfs, QLRTT_yOfs-10)
+				QuestFrame_SetAsLastShown(QuestLogRewardTitleText)
 			end
 		end
 	end

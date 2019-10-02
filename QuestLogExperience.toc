@@ -3,6 +3,7 @@
 ## Title: QuestLog Experience
 ## Author: fuba
 ## Notes: Adds an Advanced Quest Experience Function to the Quest Description
+## SavedVariables: QuestLogExperienceDB
 
 libs\LibQuestXP\LibQuestXP.xml
 QuestLogExperience.lua
