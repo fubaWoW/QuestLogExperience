@@ -1,6 +1,9 @@
 # QuestLogExperience  
 This AddOn adds an **Advanced** Quest Experience Function to the Quest Description  
-There is a Slider and an EditBox for the Level you want to know how many Experience Points you get at the selected Level!
+There is a Slider and an EditBox for the Level you want to know how many Experience Points you get at the selected Level!  
+  
+Click on the "Experience" Text with the "Left Mouse Button" it will set the Level back to your Character Level.  
+Click on the "Experience" Text with the "Right Mouse Button" it will set the Level to first Level where you will lose Experience for the selected Quest.  
 
 Added Colored Quest Level Text and Command Line to toggle it.  
 
