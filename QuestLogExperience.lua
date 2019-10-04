@@ -120,7 +120,9 @@ local function CreateSlider(g_name, parent, title, min_val, max_val, val_step, f
 end
 
 function GetAdjustedXPByLevel(charLevel, xp, qLevel)
+		if (not charLevel) or (not xp) or (not qLevel) then return 0 end
 		if (charLevel >= 60) then return 0 end
+		
     local diffFactor = 2 * (qLevel - charLevel) + 20;
     if (diffFactor < 1) then
         diffFactor = 1;
@@ -148,7 +150,6 @@ QuestLogExperienceTitleText:SetJustifyH ("LEFT")
 local QuestLogExperienceText = QuestLogDetailScrollChildFrame:CreateFontString("QuestLogExperienceText", "ARTWORK", "QuestFont")
 QuestLogExperienceText:SetShadowOffset(1,-1)
 QuestLogExperienceText:SetJustifyH ("LEFT")
---QuestLogExperienceText:SetTextColor(0.30, 0.18, 0.00, 1.00)
 
 local Slider_minVal = ((UnitLevel("player")-10 > 0 and UnitLevel("player")-10) or 1)
 local Slider_maxVal = ((UnitLevel("player")+10 < 60 and UnitLevel("player")+10) or (maxPlayerLevel-1))
