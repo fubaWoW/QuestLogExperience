@@ -192,20 +192,23 @@ end
 
 hooksecurefunc('QuestLog_UpdateQuestDetails', function()
 	local questSelected = GetQuestLogSelection()
+	if not questSelected then return end
 	local questTitle, level, questTag, isHeader, isCollapsed, isComplete, frequency, questID, startEvent, displayQuestID, isOnMap, hasLocalPOI, isTask, isBounty, isStory, isHidden, isScaling = GetQuestLogTitle(questSelected)
-	if not isHeader and (tonumber(level) > 0) and (questID > 0) then	
+	if (not isHeader) and level and questID and (tonumber(level) > 0) and (questID > 0) then
 		local xp, qLevel = LibQuestXP:GetQuestInfo(questID)
 		local maxXP = GetAdjustedXPByLevel(1, xp, qLevel)
 
 		local LoseLevel = 0
 		local LoseLevelXP = 0
-		for i=1, 10 do
-			local testlevel = qLevel+i
-			local curXP = GetAdjustedXPByLevel(testlevel, xp, qLevel)
-			if curXP < maxXP then
-				LoseLevel = testlevel
-				LoseLevelXP = curXP
-				break
+		if xp and qLevel then
+			for i=1, 10 do
+				local testlevel = qLevel+i
+				local curXP = GetAdjustedXPByLevel(testlevel, xp, qLevel)
+				if curXP < maxXP then
+					LoseLevel = testlevel
+					LoseLevelXP = curXP
+					break
+				end
 			end
 		end
 
