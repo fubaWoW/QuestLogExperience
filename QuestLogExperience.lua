@@ -8,16 +8,29 @@ local gLevel = _G.LEVEL
 local gLoss = _G.LOSS
 local gExperience = _G.COMBAT_XP_GAIN
 
-if not QuestLogExperienceDB then
-	QuestLogExperienceDB = {
-		ColorLevelByDifficulty = true,
-	}
-end
-
 local textColor = {1, 1, 1}
 local titleTextColor = {1, 0.80, 0.10}
 
 local maxPlayerLevel = 60;
+
+local frame = CreateFrame("FRAME")
+frame:RegisterEvent("ADDON_LOADED")
+
+frame:SetScript("OnEvent", function(self, event, ...)
+	if (event == "ADDON_LOADED") then
+		local addon = ...
+		if (addon == AddOnName) then
+			if not QuestLogExperienceDB then
+				QuestLogExperienceDB = {
+					ColorLevelByDifficulty = true,
+				}
+			end
+			if QuestLogExperienceDB and (not QuestLogExperienceDB.ColorLevelByDifficulty) then
+				QuestLogExperienceDB.ColorLevelByDifficulty = true
+			end
+		end
+	end
+end)
 
 local QLRTT_point, QLRTT_relativeTo, QLRTT_relativePoint, QLRTT_xOfs, QLRTT_yOfs = QuestLogRewardTitleText:GetPoint()
 
@@ -213,12 +226,10 @@ hooksecurefunc('QuestLog_UpdateQuestDetails', function()
 		end
 
 		local questXP = GetQuestLogRewardXP()
-		if not questXP or questXP == 0 then questXP = GetQuestLogRewardXP(questID) end
-		if not questXP or questXP == 0 then return end
+		if ((not questXP) or (questXP == 0)) then questXP = GetQuestLogRewardXP(questID) end
 
-		if questXP > 0 then			
+		if questXP > 0 then
 			QuestLogExperienceTitleText:SetText(gExperience)
-			QuestLogExperienceTitleText:Hide()
 			QuestLogExperienceTitleText:ClearAllPoints()
 			QuestLogExperienceTitleText:SetPoint("TOPLEFT", QuestLogQuestDescription, "BOTTOMLEFT", 0, -15)
 
@@ -226,8 +237,13 @@ hooksecurefunc('QuestLog_UpdateQuestDetails', function()
 			local PlayerMaxXP = UnitXPMax("player")
 			local charLevel = UnitLevel("player");
 			local QuestXPPerc = questXP / (PlayerMaxXP / 100)
-			Slider_minVal = (UnitLevel("player")-10 > 0 and UnitLevel("player")-10) or 1
-			Slider_maxVal = (LoseLevel+4 < 60 and LoseLevel+4) or (maxPlayerLevel-1)
+			if LoseLevel < charLevel then
+				Slider_minVal = (LoseLevel-10 > 0 and LoseLevel-10) or 1
+				Slider_maxVal = (charLevel < 60 and charLevel) or (maxPlayerLevel-1)
+			else
+				Slider_minVal = (UnitLevel("player")-10 > 0 and UnitLevel("player")-10) or 1
+				Slider_maxVal = (LoseLevel+4 < 60 and LoseLevel+4) or (maxPlayerLevel-1)
+			end
 
 			QuestLogExperienceText:ClearAllPoints()
 			QuestLogExperienceText:SetPoint("TOPLEFT", QuestLogExperienceTitleText, "BOTTOMLEFT", 0, -5)
@@ -238,7 +254,6 @@ hooksecurefunc('QuestLog_UpdateQuestDetails', function()
 			QuestLogExperienceSlider:SetMinMaxValues(Slider_minVal, Slider_maxVal)
 			QuestLogExperienceSlider.textLow:SetText(floor(Slider_minVal))
 			QuestLogExperienceSlider.textHigh:SetText(floor(Slider_maxVal))
-			QuestLogExperienceSlider.editbox:SetText(charLevel)
 			QuestLogExperienceSlider.editbox:ClearFocus()
 			QuestLogExperienceSlider:SetValue(charLevel)
 			
@@ -247,7 +262,8 @@ hooksecurefunc('QuestLog_UpdateQuestDetails', function()
 					QuestLogExperienceSlider:SetValue(LoseLevel)
 					QuestLogExperienceSlider.editbox:ClearFocus()
 				else
-					QuestLogExperienceSlider:SetValue(UnitLevel("player"))
+					QuestLogExperienceSlider:SetValue(charLevel)
+					QuestLogExperienceSlider.editbox:SetText(charLevel)
 					QuestLogExperienceSlider.editbox:ClearFocus()
 				end
 			end)
@@ -272,21 +288,29 @@ hooksecurefunc('QuestLog_UpdateQuestDetails', function()
 					coloredlevel = format("\124cff%.2x%.2x%.2x%d\124r", diffcolor.r*255, diffcolor.g*255, diffcolor.b*255, value)
 					colortext = format("\124cff%.2x%.2x%.2x%s\124r", diffcolor.r*255, diffcolor.g*255, diffcolor.b*255, colortext)
 				end				
-				QuestLogExperienceText:SetText(colortext);
-				
+				QuestLogExperienceText:SetText(colortext);				
 			end)
 
-			if questXP and (questXP > 0) then
-				QuestLogExperienceTitleText:Show()
-				QuestFrame_SetAsLastShown(QuestLogExperienceSlider)
-			else
-				QuestLogExperienceTitleText:Hide()
-			end
+			QuestLogExperienceTitleText:Show()
+			QuestLogExperienceText:Show()
+			QuestLogExperienceSlider:Show()
+			QuestFrame_SetAsLastShown(QuestLogExperienceSlider)
 			
 			if QuestLogRewardTitleText:IsShown() then
+				QuestLogRewardTitleText:ClearAllPoints()
 				QuestLogRewardTitleText:SetPoint(QLRTT_point, QuestLogExperienceSlider, QLRTT_relativePoint, QLRTT_xOfs, QLRTT_yOfs-10)
 				QuestFrame_SetAsLastShown(QuestLogRewardTitleText)
 			end
-		end
+		else
+			QuestLogExperienceTitleText:Hide()
+			QuestLogExperienceText:Hide()
+			QuestLogExperienceSlider:Hide()
+			
+			if QuestLogRewardTitleText:IsShown() then
+				QuestLogRewardTitleText:ClearAllPoints()
+				QuestLogRewardTitleText:SetPoint(QLRTT_point, QLRTT_relativeTo, QLRTT_relativePoint, QLRTT_xOfs, QLRTT_yOfs)
+				QuestFrame_SetAsLastShown(QuestLogRewardTitleText)
+			end
+		end		
 	end
 end)
