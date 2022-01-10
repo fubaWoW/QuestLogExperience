@@ -153,6 +153,15 @@ function GetAdjustedXPByLevel(charLevel, xp, qLevel)
     else
         xp = 50 * floor((xp + 25) / 50);
     end
+	
+    if C_Seasons ~= nil and C_Seasons.HasActiveSeason() and (C_Seasons.GetActiveSeason() == Enum.SeasonID.SeasonOfMastery) then
+        local roundFactor = 50;
+        if xp < 1000 then
+            roundFactor = 10;
+        end
+
+        xp = floor(xp / roundFactor + 0.5) * roundFactor * 1.4;
+    end
 
     return xp;
 end
