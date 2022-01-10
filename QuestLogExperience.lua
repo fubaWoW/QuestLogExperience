@@ -154,6 +154,7 @@ function GetAdjustedXPByLevel(charLevel, xp, qLevel)
         xp = 50 * floor((xp + 25) / 50);
     end
 	
+		-- thanks to luigipotato for this function to work properly with "World of Warcraft: Classic Season of Mastery" !!!
     if C_Seasons ~= nil and C_Seasons.HasActiveSeason() and (C_Seasons.GetActiveSeason() == Enum.SeasonID.SeasonOfMastery) then
         local roundFactor = 50;
         if xp < 1000 then
