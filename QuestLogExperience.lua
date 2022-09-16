@@ -1,9 +1,26 @@
 local AddOnName, AddOn = ...
 
+StaticPopupDialogs["QUESTLOGEXPERIENCE_WRONGVERSION"] = {
+	text = "The Addon\n\"" .. AddOnName .. "\"\nonly work with World of Warcraft Classic!\n\nThe AddOn will be disabled and the UI will be reloaded after click the \"OK\" Button.",
+	button1 = "Ok",
+	OnAccept = function()
+       DisableAddOn(AddOnName)
+			 ReloadUI()
+ 	end,
+	timeout = 0,
+	whileDead = true,
+	hideOnEscape = false,
+}
+
+local isClassicWow = select(4,GetBuildInfo()) < 20000
+if (not isClassicWow) then
+	StaticPopup_Show("QUESTLOGEXPERIENCE_WRONGVERSION")
+	return
+end
+
 local LibQuestXP = LibStub:GetLibrary("LibQuestXP-1.0", true)
 if not LibQuestXP then return end
 
-local isClassicWow = select(4,GetBuildInfo()) < 20000
 local gLevel = _G.LEVEL
 local gLoss = _G.LOSS
 local gExperience = _G.COMBAT_XP_GAIN
