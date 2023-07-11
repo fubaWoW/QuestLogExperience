@@ -11,7 +11,7 @@ enable-nolib-creation: no
 externals:
   libs\LibQuestXP:
     url: https://github.com/MrFox42/libquestxp.git
-    tag: latest
+    tag: 1.0.9-classic
   libs\LibQuestXP\libs\LibStub:
     url: https://repos.wowace.com/wow/libstub/trunk
     tag: latest
