@@ -1,4 +1,4 @@
-## Interface: 11404
+## Interface: 11504
 ## Version: @project-version@
 ## Title: QuestLog Experience
 ## Author: fuba
@@ -6,4 +6,5 @@
 ## SavedVariables: QuestLogExperienceDB
 
 libs\LibQuestXP\LibQuestXP.xml
+OptionsSliderFix.xml
 QuestLogExperience.lua

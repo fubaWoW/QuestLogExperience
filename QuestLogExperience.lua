@@ -66,7 +66,7 @@ local function CreateSlider(g_name, parent, title, min_val, max_val, val_step, f
 		tile = true, edgeSize = 1, tileSize = 5,
 	}
 	
-	local slider = CreateFrame("Slider", g_name, parent, "OptionsSliderTemplate", BackdropTemplateMixin and "BackdropTemplate")
+	local slider = CreateFrame("Slider", g_name, parent, "OptionsSliderTemplateFixed", BackdropTemplateMixin and "BackdropTemplate") -- another bug from Blizzard
 	local editbox = CreateFrame("EditBox", g_name.."EditBox", slider, BackdropTemplateMixin and "BackdropTemplate")
 	
 	local text = _G[slider:GetName() .. "Text"]
