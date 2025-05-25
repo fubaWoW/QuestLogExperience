@@ -181,6 +181,15 @@ function GetAdjustedXPByLevel(charLevel, xp, qLevel)
         xp = floor(xp / roundFactor + 0.5) * roundFactor * 1.4;
     end
 
+	if C_Seasons ~= nil and C_Seasons.HasActiveSeason() and (C_Seasons.GetActiveSeason() == Enum.SeasonID.SeasonOfDiscovery) then
+        local roundFactor = 50;
+        if xp < 1000 then
+            roundFactor = 10;
+        end
+
+        xp = floor(xp / roundFactor + 0.5) * roundFactor * 2.5;
+    end
+
     return xp;
 end
 
@@ -256,6 +265,9 @@ hooksecurefunc('QuestLog_UpdateQuestDetails', function()
 		if ((not questXP) or (questXP == 0)) then questXP = GetQuestLogRewardXP(questID) end
 
 		if questXP > 0 then
+			if C_Seasons ~= nil and C_Seasons.HasActiveSeason() and (C_Seasons.GetActiveSeason() == Enum.SeasonID.SeasonOfDiscovery) then
+				questXP = questXP * 2.5;
+			end
 			QuestLogExperienceTitleText:SetText(gExperience)
 			QuestLogExperienceTitleText:ClearAllPoints()
 			QuestLogExperienceTitleText:SetPoint("TOPLEFT", QuestLogQuestDescription, "BOTTOMLEFT", 0, -15)
