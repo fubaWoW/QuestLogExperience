@@ -1,7 +1,7 @@
 local AddOnName, AddOn = ...
 
 StaticPopupDialogs["QUESTLOGEXPERIENCE_WRONGVERSION"] = {
-	text = "The Addon\n\"" .. AddOnName .. "\"\nonly work with World of Warcraft Classic!\n\nThe AddOn will be disabled and the UI will be reloaded after click the \"OK\" Button.",
+	text = "The Addon\n\"" .. AddOnName .. "\"\nonly work with World of Warcraft Classic and SoD!\n\nThe AddOn will be disabled and the UI will be reloaded after click the \"OK\" Button.",
 	button1 = "Ok",
 	OnAccept = function()
        DisableAddOn(AddOnName)
