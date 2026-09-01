@@ -26,13 +26,12 @@ local LibQuestXP = LibStub:GetLibrary("LibQuestXP-1.0", true)
 if not LibQuestXP then return end
 
 local gLevel = _G.LEVEL
-local gLoss = _G.LOSS
 local gExperience = _G.COMBAT_XP_GAIN
 
 local textColor = {1, 1, 1}
 local titleTextColor = {1, 0.80, 0.10}
 
-local maxPlayerLevel = 60;
+local maxPlayerLevel = GetMaxPlayerLevel and GetMaxPlayerLevel() or 70;
 
 local frame = CreateFrame("FRAME")
 frame:RegisterEvent("ADDON_LOADED")
@@ -155,7 +154,7 @@ end
 
 function GetAdjustedXPByLevel(charLevel, xp, qLevel)
 		if (not charLevel) or (not xp) or (not qLevel) then return 0 end
-		if (charLevel >= 60) then return 0 end
+		if (charLevel >= maxPlayerLevel) then return 0 end
 
     local diffFactor = 2 * (qLevel - charLevel) + 20;
     if (diffFactor < 1) then
@@ -211,6 +210,26 @@ local QuestLogExperienceSlider = CreateSlider("QuestLogExperienceSlider", QuestL
 local XpResetButton = CreateFrame("Button", nil, QuestLogDetailScrollChildFrame)
 XpResetButton:SetAllPoints(QuestLogExperienceTitleText)
 XpResetButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+XpResetButton:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:AddLine("QuestLogExperience")
+    GameTooltip:AddLine("Left-click: Reset Slider to character level.", 1, 1, 1)
+    GameTooltip:AddLine("Right-click: Set Slider to first level with reduced XP.", 1, 1, 1)
+    GameTooltip:Show()
+end)
+XpResetButton:SetScript("OnLeave", function()
+    GameTooltip:Hide()
+end)
+XpResetButton:SetScript("OnClick", function(self, btn)
+    if btn == "RightButton" then
+        QuestLogExperienceSlider:SetValue(self.loseLevel)
+        QuestLogExperienceSlider.editbox:ClearFocus()
+    else
+        QuestLogExperienceSlider:SetValue(self.charLevel)
+        QuestLogExperienceSlider.editbox:SetText(self.charLevel)
+        QuestLogExperienceSlider.editbox:ClearFocus()
+    end
+end)
 
 if ElvUI then
 	QuestLogExperienceTitleText:SetTextColor(unpack(titleTextColor))
@@ -300,16 +319,8 @@ hooksecurefunc('QuestLog_UpdateQuestDetails', function()
 			QuestLogExperienceSlider.editbox:ClearFocus()
 			QuestLogExperienceSlider:SetValue(charLevel)
 
-			XpResetButton:SetScript("OnClick", function(self, btn)
-				if btn == "RightButton" then
-					QuestLogExperienceSlider:SetValue(LoseLevel)
-					QuestLogExperienceSlider.editbox:ClearFocus()
-				else
-					QuestLogExperienceSlider:SetValue(charLevel)
-					QuestLogExperienceSlider.editbox:SetText(charLevel)
-					QuestLogExperienceSlider.editbox:ClearFocus()
-				end
-			end)
+			XpResetButton.charLevel = charLevel
+			XpResetButton.loseLevel = LoseLevel
 
 			local diffcolor = GetRelativeDifficultyColor(charLevel, level)
 			local coloredlevel = charLevel
@@ -320,7 +331,7 @@ hooksecurefunc('QuestLog_UpdateQuestDetails', function()
 			end
 			QuestLogExperienceText:SetText(colortext);
 
-			QuestLogExperienceSlider:HookScript("OnValueChanged", function(self, value)
+			QuestLogExperienceSlider:SetScript("OnValueChanged", function(self, value)
 				local slider_questXP = GetAdjustedXPByLevel(value, xp, qLevel)
 				local slider_PlayerMaxXP = UnitXPMax("player")
 				local slider_XPPerc = slider_questXP / (slider_PlayerMaxXP / 100)
