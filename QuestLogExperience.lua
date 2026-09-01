@@ -1,5 +1,7 @@
 local AddOnName, AddOn = ...
 
+local DisableAddOn = C_AddOns and C_AddOns.DisableAddOn or DisableAddOn
+
 StaticPopupDialogs["QUESTLOGEXPERIENCE_WRONGVERSION"] = {
 	text = "The Addon\n\"" .. AddOnName .. "\"\nonly work with World of Warcraft Classic and SoD!\n\nThe AddOn will be disabled and the UI will be reloaded after click the \"OK\" Button.",
 	button1 = "Ok",
@@ -13,7 +15,9 @@ StaticPopupDialogs["QUESTLOGEXPERIENCE_WRONGVERSION"] = {
 }
 
 local isClassicWow = select(4,GetBuildInfo()) < 20000
-if (not isClassicWow) then
+local isClassicTBC = select(4,GetBuildInfo()) < 30000
+
+if (not isClassicWow) and (not isClassicTBC) then
 	StaticPopup_Show("QUESTLOGEXPERIENCE_WRONGVERSION")
 	return
 end
@@ -65,17 +69,17 @@ local function CreateSlider(g_name, parent, title, min_val, max_val, val_step, f
 		edgeFile = "Interface\\ChatFrame\\ChatFrameBackground",
 		tile = true, edgeSize = 1, tileSize = 5,
 	}
-	
+
 	local slider = CreateFrame("Slider", g_name, parent, "OptionsSliderTemplateFixed", BackdropTemplateMixin and "BackdropTemplate") -- another bug from Blizzard
 	local editbox = CreateFrame("EditBox", g_name.."EditBox", slider, BackdropTemplateMixin and "BackdropTemplate")
-	
+
 	local text = _G[slider:GetName() .. "Text"]
 	text:SetFontObject(GameFontNormal)
 	text:SetJustifyH("CENTER")
 	text:SetHeight(15)
 	text:SetText(title)
 	slider.text = text
-	
+
 	slider:SetOrientation("HORIZONTAL")
 	slider:SetHeight(15)
 	slider:SetHitRectInsets(0, 0, -10, 0)
@@ -87,17 +91,17 @@ local function CreateSlider(g_name, parent, title, min_val, max_val, val_step, f
 	_G[slider:GetName() .. "High"]:SetText(nil)
 	slider:SetMinMaxValues(min_val, max_val)
 	slider:SetValueStep(val_step)
-	
+
 	local lowtext = slider:CreateFontString(g_name.."LowText", "ARTWORK", "GameFontHighlightSmall")
 	lowtext:SetPoint("TOPLEFT", slider, "BOTTOMLEFT", 2, 3)
 
 	local hightext = slider:CreateFontString(g_name.."HighText", "ARTWORK", "GameFontHighlightSmall")
 	hightext:SetPoint("TOPRIGHT", slider, "BOTTOMRIGHT", -2, 3)
-	
+
 	lowtext:SetText(floor(min_val))
 	hightext:SetText(floor(max_val))
 	slider:SetObeyStepOnDrag(true)
-	
+
 	editbox:SetAutoFocus(false)
 	editbox:SetFontObject(GameFontHighlightSmall)
 	editbox:SetPoint("TOP", slider, "BOTTOM")
@@ -107,9 +111,9 @@ local function CreateSlider(g_name, parent, title, min_val, max_val, val_step, f
 	editbox:EnableMouse(true)
 	editbox:SetBackdrop(SliderEditBoxBackdrop)
 	editbox:SetBackdropColor(0, 0, 0, 0.5)
-	editbox:SetBackdropBorderColor(0.3, 0.3, 0.30, 0.80)	
+	editbox:SetBackdropBorderColor(0.3, 0.3, 0.30, 0.80)
 	editbox:SetText(slider:GetValue())
-	
+
 	editbox:SetScript("OnEnterPressed", function(self)
 			local val = self:GetText()
 			if tonumber(val) then
@@ -117,42 +121,42 @@ local function CreateSlider(g_name, parent, title, min_val, max_val, val_step, f
 				self:ClearFocus()
 			end
 	end)
-	
+
 	editbox:SetScript("OnEnter", function(self)
 		self:SetBackdropBorderColor(0.5, 0.5, 0.5, 1)
 	end)
-	
+
 	editbox:SetScript("OnLeave", function(self)
 		self:SetBackdropBorderColor(0.3, 0.3, 0.3, 0.8)
 	end)
-	
+
 	slider:HookScript("OnMouseDown", function(self, btn)
 		editbox:ClearFocus()
 	end)
-	
+
 	slider:SetScript("OnValueChanged", function(self)
 			editbox:SetText(tostring((floor(self:GetValue() / val_step) * val_step)))
 			if func then func(self) end
 	end)
-	
+
 	if ElvUI then
 		local E, L, V, P, G = unpack(ElvUI)
 		local S = E:GetModule('Skins')
 		S:HandleSliderFrame(slider)
 		S:HandleEditBox(editbox)
 	end
-	
+
 	slider.textLow = lowtext
-	slider.textHigh = hightext	
+	slider.textHigh = hightext
 	slider.editbox = editbox
-	
+
 	return slider
 end
 
 function GetAdjustedXPByLevel(charLevel, xp, qLevel)
 		if (not charLevel) or (not xp) or (not qLevel) then return 0 end
 		if (charLevel >= 60) then return 0 end
-		
+
     local diffFactor = 2 * (qLevel - charLevel) + 20;
     if (diffFactor < 1) then
         diffFactor = 1;
@@ -170,7 +174,7 @@ function GetAdjustedXPByLevel(charLevel, xp, qLevel)
     else
         xp = 50 * floor((xp + 25) / 50);
     end
-	
+
 		-- thanks to luigipotato for this function to work properly with "World of Warcraft: Classic Season of Mastery" !!!
     if C_Seasons ~= nil and C_Seasons.HasActiveSeason() and (C_Seasons.GetActiveSeason() == Enum.SeasonID.SeasonOfMastery) then
         local roundFactor = 50;
@@ -286,7 +290,7 @@ hooksecurefunc('QuestLog_UpdateQuestDetails', function()
 
 			QuestLogExperienceText:ClearAllPoints()
 			QuestLogExperienceText:SetPoint("TOPLEFT", QuestLogExperienceTitleText, "BOTTOMLEFT", 0, -5)
-			
+
 			-- Slider
 			QuestLogExperienceSlider:ClearAllPoints()
 			QuestLogExperienceSlider:SetPoint("TOPLEFT", QuestLogExperienceText, "BOTTOMLEFT", 0, -2);
@@ -295,7 +299,7 @@ hooksecurefunc('QuestLog_UpdateQuestDetails', function()
 			QuestLogExperienceSlider.textHigh:SetText(floor(Slider_maxVal))
 			QuestLogExperienceSlider.editbox:ClearFocus()
 			QuestLogExperienceSlider:SetValue(charLevel)
-			
+
 			XpResetButton:SetScript("OnClick", function(self, btn)
 				if btn == "RightButton" then
 					QuestLogExperienceSlider:SetValue(LoseLevel)
@@ -306,7 +310,7 @@ hooksecurefunc('QuestLog_UpdateQuestDetails', function()
 					QuestLogExperienceSlider.editbox:ClearFocus()
 				end
 			end)
-			
+
 			local diffcolor = GetRelativeDifficultyColor(charLevel, level)
 			local coloredlevel = charLevel
 			local colortext = gLevel.." "..charLevel..": "..questXP.." ("..round(QuestXPPerc, 2).."%)"
@@ -315,7 +319,7 @@ hooksecurefunc('QuestLog_UpdateQuestDetails', function()
 				colortext = format("\124cff%.2x%.2x%.2x%s\124r", diffcolor.r*255, diffcolor.g*255, diffcolor.b*255, colortext)
 			end
 			QuestLogExperienceText:SetText(colortext);
-			
+
 			QuestLogExperienceSlider:HookScript("OnValueChanged", function(self, value)
 				local slider_questXP = GetAdjustedXPByLevel(value, xp, qLevel)
 				local slider_PlayerMaxXP = UnitXPMax("player")
@@ -326,15 +330,15 @@ hooksecurefunc('QuestLog_UpdateQuestDetails', function()
 				if QuestLogExperienceDB.ColorLevelByDifficulty then
 					coloredlevel = format("\124cff%.2x%.2x%.2x%d\124r", diffcolor.r*255, diffcolor.g*255, diffcolor.b*255, value)
 					colortext = format("\124cff%.2x%.2x%.2x%s\124r", diffcolor.r*255, diffcolor.g*255, diffcolor.b*255, colortext)
-				end				
-				QuestLogExperienceText:SetText(colortext);				
+				end
+				QuestLogExperienceText:SetText(colortext);
 			end)
 
 			QuestLogExperienceTitleText:Show()
 			QuestLogExperienceText:Show()
 			QuestLogExperienceSlider:Show()
 			QuestFrame_SetAsLastShown(QuestLogExperienceSlider)
-			
+
 			if QuestLogRewardTitleText:IsShown() then
 				QuestLogRewardTitleText:ClearAllPoints()
 				QuestLogRewardTitleText:SetPoint(QLRTT_point, QuestLogExperienceSlider, QLRTT_relativePoint, QLRTT_xOfs, QLRTT_yOfs-10)
@@ -344,12 +348,12 @@ hooksecurefunc('QuestLog_UpdateQuestDetails', function()
 			QuestLogExperienceTitleText:Hide()
 			QuestLogExperienceText:Hide()
 			QuestLogExperienceSlider:Hide()
-			
+
 			if QuestLogRewardTitleText:IsShown() then
 				QuestLogRewardTitleText:ClearAllPoints()
 				QuestLogRewardTitleText:SetPoint(QLRTT_point, QLRTT_relativeTo, QLRTT_relativePoint, QLRTT_xOfs, QLRTT_yOfs)
 				QuestFrame_SetAsLastShown(QuestLogRewardTitleText)
 			end
-		end		
+		end
 	end
 end)
