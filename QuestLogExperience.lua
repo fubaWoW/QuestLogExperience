@@ -13,8 +13,8 @@ StaticPopupDialogs["QUESTLOGEXPERIENCE_WRONGVERSION"] = {
 	whileDead = true,
 	hideOnEscape = false,
 }
-
-local isClassicWow = select(4,GetBuildInfo()) < 20000
+local build = select(4,GetBuildInfo())
+local isClassicWow = build < 20000
 local isClassicTBC = build >= 20000 and build < 30000
 
 if (not isClassicWow) and (not isClassicTBC) then
