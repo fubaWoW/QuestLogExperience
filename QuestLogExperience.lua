@@ -3,7 +3,7 @@ local AddOnName, AddOn = ...
 local DisableAddOn = C_AddOns and C_AddOns.DisableAddOn or DisableAddOn
 
 StaticPopupDialogs["QUESTLOGEXPERIENCE_WRONGVERSION"] = {
-	text = "The Addon\n\"" .. AddOnName .. "\"\nonly work with World of Warcraft Classic and SoD!\n\nThe AddOn will be disabled and the UI will be reloaded after click the \"OK\" Button.",
+	text = "The Addon\n\"" .. AddOnName .. "\"\nonly works with World of Warcraft Classic, SoD and TBC!\n\nThe AddOn will be disabled and the UI will be reloaded after click the \"OK\" Button.",
 	button1 = "Ok",
 	OnAccept = function()
        DisableAddOn(AddOnName)
@@ -15,7 +15,7 @@ StaticPopupDialogs["QUESTLOGEXPERIENCE_WRONGVERSION"] = {
 }
 
 local isClassicWow = select(4,GetBuildInfo()) < 20000
-local isClassicTBC = select(4,GetBuildInfo()) < 30000
+local isClassicTBC = build >= 20000 and build < 30000
 
 if (not isClassicWow) and (not isClassicTBC) then
 	StaticPopup_Show("QUESTLOGEXPERIENCE_WRONGVERSION")
@@ -26,12 +26,13 @@ local LibQuestXP = LibStub:GetLibrary("LibQuestXP-1.0", true)
 if not LibQuestXP then return end
 
 local gLevel = _G.LEVEL
+local gLoss = _G.LOSS
 local gExperience = _G.COMBAT_XP_GAIN
 
 local textColor = {1, 1, 1}
 local titleTextColor = {1, 0.80, 0.10}
 
-local maxPlayerLevel = GetMaxPlayerLevel and GetMaxPlayerLevel() or 70;
+local maxPlayerLevel = GetMaxPlayerLevel and GetMaxPlayerLevel() or (isClassicTBC and 70 or 60);
 
 local frame = CreateFrame("FRAME")
 frame:RegisterEvent("ADDON_LOADED")
@@ -204,7 +205,7 @@ QuestLogExperienceText:SetShadowOffset(1,-1)
 QuestLogExperienceText:SetJustifyH ("LEFT")
 
 local Slider_minVal = ((UnitLevel("player")-10 > 0 and UnitLevel("player")-10) or 1)
-local Slider_maxVal = ((UnitLevel("player")+10 < 60 and UnitLevel("player")+10) or (maxPlayerLevel-1))
+local Slider_maxVal = ((UnitLevel("player")+10 < maxPlayerLevel and UnitLevel("player")+10) or (maxPlayerLevel-1))
 local QuestLogExperienceSlider = CreateSlider("QuestLogExperienceSlider", QuestLogDetailScrollChildFrame, "", Slider_minVal, Slider_maxVal, 1, nil)
 
 local XpResetButton = CreateFrame("Button", nil, QuestLogDetailScrollChildFrame)
@@ -301,10 +302,10 @@ hooksecurefunc('QuestLog_UpdateQuestDetails', function()
 			local QuestXPPerc = questXP / (PlayerMaxXP / 100)
 			if LoseLevel < charLevel then
 				Slider_minVal = (LoseLevel-10 > 0 and LoseLevel-10) or 1
-				Slider_maxVal = (charLevel < 60 and charLevel) or (maxPlayerLevel-1)
+				Slider_maxVal = (charLevel < maxPlayerLevel and charLevel) or (maxPlayerLevel-1)
 			else
 				Slider_minVal = (UnitLevel("player")-10 > 0 and UnitLevel("player")-10) or 1
-				Slider_maxVal = (LoseLevel+4 < 60 and LoseLevel+4) or (maxPlayerLevel-1)
+				Slider_maxVal = (LoseLevel+4 < maxPlayerLevel and LoseLevel+4) or (maxPlayerLevel-1)
 			end
 
 			QuestLogExperienceText:ClearAllPoints()
