@@ -1,6 +1,7 @@
 ignore:
   - README.md
   - CHANGES.txt
+  - CHANGELOG.md
   - LICENSE.md
   - pics
   - pkgmeta.yaml
