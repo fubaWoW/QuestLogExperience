@@ -1,0 +1,15 @@
+## Interface: 11509
+## Version: @project-version@
+## Title: QuestLog Experience
+## Author: fuba
+## Notes: Adds an Advanced Quest Experience function to the Quest Description
+## IconTexture: Interface\AddOns\QuestLogExperience\fubaLogo
+## SavedVariables: QuestLogExperienceDB
+
+## X-Category: |cffff8000fuba
+## Category-enUS: |cffff8000fuba
+## Category-deDE: |cffff8000fuba
+
+db\01_db_classic.lua
+OptionsSliderFix.xml
+QuestLogExperience.lua
