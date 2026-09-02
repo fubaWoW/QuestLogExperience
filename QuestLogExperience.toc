@@ -17,10 +17,8 @@
 #@version-classic@
 db\01_db_classic.lua
 #@end-version-classic@
-
 #@version-bcc@
 db\02_db_tbc.lua
 #@end-version-bcc@
-
 OptionsSliderFix.xml
 QuestLogExperience.lua
