@@ -1,5 +1,5 @@
+## Interface: 20506
 ## Interface-Classic: 11509
-## Interface-TBC: 20506
 ## Version: @project-version@
 ## Title: QuestLog Experience
 ## Author: fuba
