@@ -14,7 +14,7 @@ Added Colored Quest Level Text and Command Line to toggle it.
   
   
 This AddOn is Insired by the WowHead Experience at Level Slider.  
-This AddOn **uses** [LibQuestXP (Classic)](https://github.com/MrFox42/libquestxp) Databases → Thanks to LibQuestXP for their Databases!  
+This AddOn **uses** [LibQuestXP (Classic)](https://github.com/MrFox42/libquestxp) Databases.  
 At this Point **many** thanks to MisterFox for this nice Lib!  
   
 As always for my AddOns, this AddOn also have seamless ElvUI integration!  
