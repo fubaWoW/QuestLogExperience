@@ -65,7 +65,7 @@ local function AddOnPrint(msg)
 end
 
 -----------------------------------------------------------------------
--- Embedded LibQuestXP functionality
+-- Experience Calculations
 -----------------------------------------------------------------------
 
 local selectedQuestLogIndex = nil
