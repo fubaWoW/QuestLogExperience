@@ -3,3 +3,5 @@ ignore:
   - CHANGES.txt
   - LICENSE.md
   - pics
+
+license-output: LICENSE.txt

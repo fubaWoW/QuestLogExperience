@@ -1,4 +1,6 @@
 ## Interface: 20506
+## Interface-Classic: 11509
+## Interface-TBC: 20506
 ## Version: @project-version@
 ## Title: QuestLog Experience
 ## Author: fuba
@@ -6,10 +8,19 @@
 ## IconTexture: Interface\AddOns\QuestLogExperience\fubaLogo
 ## SavedVariables: QuestLogExperienceDB
 
+## X-Curse-Project-ID: 345166
+
 ## X-Category: |cffff8000fuba
 ## Category-enUS: |cffff8000fuba
 ## Category-deDE: |cffff8000fuba
 
+#@version-classic@
+db\01_db_classic.lua
+#@end-version-classic@
+
+#@version-bcc@
 db\02_db_tbc.lua
+#@end-version-bcc@
+
 OptionsSliderFix.xml
 QuestLogExperience.lua

@@ -6,14 +6,15 @@ StaticPopupDialogs["QUESTLOGEXPERIENCE_WRONGVERSION"] = {
 	text = "The Addon\n\"" .. AddOnName .. "\"\nonly works with World of Warcraft Classic, SoD and TBC!\n\nThe AddOn will be disabled and the UI will be reloaded after click the \"OK\" Button.",
 	button1 = "Ok",
 	OnAccept = function()
-       DisableAddOn(AddOnName)
-			 ReloadUI()
- 	end,
+		DisableAddOn(AddOnName)
+		ReloadUI()
+	end,
 	timeout = 0,
 	whileDead = true,
 	hideOnEscape = false,
 }
-local build = select(4,GetBuildInfo())
+
+local build = select(4, GetBuildInfo())
 local isClassicWow = build < 20000
 local isClassicTBC = build >= 20000 and build < 30000
 
@@ -22,9 +23,6 @@ if (not isClassicWow) and (not isClassicTBC) then
 	return
 end
 
-local LibQuestXP = LibStub:GetLibrary("LibQuestXP-1.0", true)
-if not LibQuestXP then return end
-
 local gLevel = _G.LEVEL
 local gLoss = _G.LOSS
 local gExperience = _G.COMBAT_XP_GAIN
@@ -32,52 +30,213 @@ local gExperience = _G.COMBAT_XP_GAIN
 local textColor = {1, 1, 1}
 local titleTextColor = {1, 0.80, 0.10}
 
-local maxPlayerLevel = GetMaxPlayerLevel and GetMaxPlayerLevel() or (isClassicTBC and 70 or 60);
+local maxPlayerLevel = GetMaxPlayerLevel and GetMaxPlayerLevel() or (isClassicTBC and 70 or 60)
 
 local frame = CreateFrame("FRAME")
 frame:RegisterEvent("ADDON_LOADED")
 
 frame:SetScript("OnEvent", function(self, event, ...)
-	if (event == "ADDON_LOADED") then
+	if event == "ADDON_LOADED" then
 		local addon = ...
-		if (addon == AddOnName) then
+
+		if addon == AddOnName then
 			if not QuestLogExperienceDB then
 				QuestLogExperienceDB = {
 					ColorLevelByDifficulty = true,
 				}
 			end
-			if QuestLogExperienceDB and (not QuestLogExperienceDB.ColorLevelByDifficulty) then
+
+			if not QuestLogExperienceDB.ColorLevelByDifficulty then
 				QuestLogExperienceDB.ColorLevelByDifficulty = true
 			end
 		end
 	end
 end)
 
-local QLRTT_point, QLRTT_relativeTo, QLRTT_relativePoint, QLRTT_xOfs, QLRTT_yOfs = QuestLogRewardTitleText:GetPoint()
+local QLRTT_point, QLRTT_relativeTo, QLRTT_relativePoint, QLRTT_xOfs, QLRTT_yOfs =
+	QuestLogRewardTitleText:GetPoint()
 
 local function round(num, numDecimalPlaces)
-  return tonumber(string.format("%." .. (numDecimalPlaces or 0) .. "f", num))
+	return tonumber(string.format("%." .. (numDecimalPlaces or 0) .. "f", num))
 end
 
 local function AddOnPrint(msg)
-	(SELECTED_CHAT_FRAME or DEFAULT_CHAT_FRAME):AddMessage("|cffffff78QLE: |r"..msg)
+	(SELECTED_CHAT_FRAME or DEFAULT_CHAT_FRAME):AddMessage("|cffffff78QLE: |r" .. msg)
 end
+
+-----------------------------------------------------------------------
+-- Embedded LibQuestXP functionality
+-----------------------------------------------------------------------
+
+local selectedQuestLogIndex = nil
+local multiplier = 1
+
+local function hookSelectQuestLogEntry(questLogIndex)
+	selectedQuestLogIndex = questLogIndex
+end
+
+hooksecurefunc("SelectQuestLogEntry", hookSelectQuestLogEntry)
+
+local function GetQuestInfo(questID)
+	if QuestLogExperienceXPDB and QuestLogExperienceXPDB[questID] ~= nil then
+		return QuestLogExperienceXPDB[questID]["xp"], QuestLogExperienceXPDB[questID]["level"]
+	end
+
+	return 0, nil
+end
+
+local function GetAdjustedXP(xp, qLevel)
+	local charLevel = UnitLevel("player")
+
+	if charLevel == maxPlayerLevel then
+		return 0
+	end
+
+	local diffFactor = 2 * (qLevel - charLevel) + 20
+
+	if diffFactor < 1 then
+		diffFactor = 1
+	elseif diffFactor > 10 then
+		diffFactor = 10
+	end
+
+	xp = xp * diffFactor / 10
+
+	if xp <= 100 then
+		xp = 5 * floor((xp + 2) / 5)
+	elseif xp <= 500 then
+		xp = 10 * floor((xp + 5) / 10)
+	elseif xp <= 1000 then
+		xp = 25 * floor((xp + 12) / 25)
+	else
+		xp = 50 * floor((xp + 25) / 50)
+	end
+
+	return floor(xp * multiplier)
+end
+
+local function GetQuestLogRewardXP(questID)
+	local title, qLevel, xp
+
+	-- Try getting the quest from the selected quest log entry
+	if questID == nil and selectedQuestLogIndex ~= nil then
+		title, qLevel, _, _, _, _, _, questID = GetQuestLogTitle(selectedQuestLogIndex)
+	end
+
+	-- Return 0 if quest ID is not available
+	if questID == nil then
+		return 0
+	end
+
+	-- Get stored quest XP and quest level
+	xp, qLevel = GetQuestInfo(questID)
+
+	-- Return base XP if level information is not available
+	if qLevel == nil then
+		return xp
+	end
+
+	-- Return adjusted XP if all information is available
+	return GetAdjustedXP(xp, qLevel)
+end
+
+-- Calculate XP for an arbitrary character level.
+-- This is the function used by the slider.
+function GetAdjustedXPByLevel(charLevel, xp, qLevel)
+	if (not charLevel) or (not xp) or (not qLevel) then
+		return 0
+	end
+
+	if charLevel >= maxPlayerLevel then
+		return 0
+	end
+
+	local diffFactor = 2 * (qLevel - charLevel) + 20
+
+	if diffFactor < 1 then
+		diffFactor = 1
+	elseif diffFactor > 10 then
+		diffFactor = 10
+	end
+
+	xp = xp * diffFactor / 10
+
+	if xp <= 100 then
+		xp = 5 * floor((xp + 2) / 5)
+	elseif xp <= 500 then
+		xp = 10 * floor((xp + 5) / 10)
+	elseif xp <= 1000 then
+		xp = 25 * floor((xp + 12) / 25)
+	else
+		xp = 50 * floor((xp + 25) / 50)
+	end
+
+	-- Season of Mastery XP modifier
+	if C_Seasons ~= nil
+		and C_Seasons.HasActiveSeason()
+		and C_Seasons.GetActiveSeason() == Enum.SeasonID.SeasonOfMastery then
+
+		local roundFactor = 50
+
+		if xp < 1000 then
+			roundFactor = 10
+		end
+
+		xp = floor(xp / roundFactor + 0.5) * roundFactor * 1.4
+	end
+
+	-- Season of Discovery XP modifier
+	if C_Seasons ~= nil
+		and C_Seasons.HasActiveSeason()
+		and C_Seasons.GetActiveSeason() == Enum.SeasonID.SeasonOfDiscovery then
+
+		local roundFactor = 50
+
+		if xp < 1000 then
+			roundFactor = 10
+		end
+
+		xp = floor(xp / roundFactor + 0.5) * roundFactor * 2.5
+	end
+
+	return xp
+end
+
+-----------------------------------------------------------------------
+-- Slider
+-----------------------------------------------------------------------
 
 local function CreateSlider(g_name, parent, title, min_val, max_val, val_step, func)
 	local SliderEditBoxBackdrop = {
 		bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
 		edgeFile = "Interface\\ChatFrame\\ChatFrameBackground",
-		tile = true, edgeSize = 1, tileSize = 5,
+		tile = true,
+		edgeSize = 1,
+		tileSize = 5,
 	}
 
-	local slider = CreateFrame("Slider", g_name, parent, "OptionsSliderTemplateFixed", BackdropTemplateMixin and "BackdropTemplate") -- another bug from Blizzard
-	local editbox = CreateFrame("EditBox", g_name.."EditBox", slider, BackdropTemplateMixin and "BackdropTemplate")
+	local slider = CreateFrame(
+		"Slider",
+		g_name,
+		parent,
+		"OptionsSliderTemplateFixed",
+		BackdropTemplateMixin and "BackdropTemplate"
+	)
+
+	local editbox = CreateFrame(
+		"EditBox",
+		g_name .. "EditBox",
+		slider,
+		BackdropTemplateMixin and "BackdropTemplate"
+	)
 
 	local text = _G[slider:GetName() .. "Text"]
+
 	text:SetFontObject(GameFontNormal)
 	text:SetJustifyH("CENTER")
 	text:SetHeight(15)
 	text:SetText(title)
+
 	slider.text = text
 
 	slider:SetOrientation("HORIZONTAL")
@@ -87,19 +246,32 @@ local function CreateSlider(g_name, parent, title, min_val, max_val, val_step, f
 	slider:SetPoint("LEFT", 3, 0)
 	slider:SetPoint("RIGHT", -3, 0)
 	slider:SetValue(0)
+
 	_G[slider:GetName() .. "Low"]:SetText(nil)
 	_G[slider:GetName() .. "High"]:SetText(nil)
+
 	slider:SetMinMaxValues(min_val, max_val)
 	slider:SetValueStep(val_step)
 
-	local lowtext = slider:CreateFontString(g_name.."LowText", "ARTWORK", "GameFontHighlightSmall")
+	local lowtext = slider:CreateFontString(
+		g_name .. "LowText",
+		"ARTWORK",
+		"GameFontHighlightSmall"
+	)
+
 	lowtext:SetPoint("TOPLEFT", slider, "BOTTOMLEFT", 2, 3)
 
-	local hightext = slider:CreateFontString(g_name.."HighText", "ARTWORK", "GameFontHighlightSmall")
+	local hightext = slider:CreateFontString(
+		g_name .. "HighText",
+		"ARTWORK",
+		"GameFontHighlightSmall"
+	)
+
 	hightext:SetPoint("TOPRIGHT", slider, "BOTTOMRIGHT", -2, 3)
 
 	lowtext:SetText(floor(min_val))
 	hightext:SetText(floor(max_val))
+
 	slider:SetObeyStepOnDrag(true)
 
 	editbox:SetAutoFocus(false)
@@ -109,17 +281,19 @@ local function CreateSlider(g_name, parent, title, min_val, max_val, val_step, f
 	editbox:SetWidth(70)
 	editbox:SetJustifyH("CENTER")
 	editbox:EnableMouse(true)
+
 	editbox:SetBackdrop(SliderEditBoxBackdrop)
 	editbox:SetBackdropColor(0, 0, 0, 0.5)
 	editbox:SetBackdropBorderColor(0.3, 0.3, 0.30, 0.80)
 	editbox:SetText(slider:GetValue())
 
 	editbox:SetScript("OnEnterPressed", function(self)
-			local val = self:GetText()
-			if tonumber(val) then
-				slider:SetValue(val)
-				self:ClearFocus()
-			end
+		local val = self:GetText()
+
+		if tonumber(val) then
+			slider:SetValue(val)
+			self:ClearFocus()
+		end
 	end)
 
 	editbox:SetScript("OnEnter", function(self)
@@ -130,18 +304,24 @@ local function CreateSlider(g_name, parent, title, min_val, max_val, val_step, f
 		self:SetBackdropBorderColor(0.3, 0.3, 0.3, 0.8)
 	end)
 
-	slider:HookScript("OnMouseDown", function(self, btn)
+	slider:HookScript("OnMouseDown", function(self)
 		editbox:ClearFocus()
 	end)
 
 	slider:SetScript("OnValueChanged", function(self)
-			editbox:SetText(tostring((floor(self:GetValue() / val_step) * val_step)))
-			if func then func(self) end
+		editbox:SetText(
+			tostring(floor(self:GetValue() / val_step) * val_step)
+		)
+
+		if func then
+			func(self)
+		end
 	end)
 
 	if ElvUI then
 		local E, L, V, P, G = unpack(ElvUI)
-		local S = E:GetModule('Skins')
+		local S = E:GetModule("Skins")
+
 		S:HandleSliderFrame(slider)
 		S:HandleEditBox(editbox)
 	end
@@ -153,83 +333,83 @@ local function CreateSlider(g_name, parent, title, min_val, max_val, val_step, f
 	return slider
 end
 
-function GetAdjustedXPByLevel(charLevel, xp, qLevel)
-		if (not charLevel) or (not xp) or (not qLevel) then return 0 end
-		if (charLevel >= maxPlayerLevel) then return 0 end
+-----------------------------------------------------------------------
+-- Quest Log UI
+-----------------------------------------------------------------------
 
-    local diffFactor = 2 * (qLevel - charLevel) + 20;
-    if (diffFactor < 1) then
-        diffFactor = 1;
-    elseif (diffFactor > 10) then
-        diffFactor = 10;
-    end
+local QuestLogExperienceTitleText =
+	QuestLogDetailScrollChildFrame:CreateFontString(
+		"QuestLogExperienceTitleText",
+		"ARTWORK",
+		"QuestTitleFont"
+	)
 
-    xp = xp * diffFactor / 10;
-    if (xp <= 100) then
-        xp = 5 * floor((xp + 2) / 5);
-    elseif (xp <= 500) then
-        xp = 10 * floor((xp + 5) / 10);
-    elseif (xp <= 1000) then
-        xp = 25 * floor((xp + 12) / 25);
-    else
-        xp = 50 * floor((xp + 25) / 50);
-    end
+QuestLogExperienceTitleText:SetJustifyH("LEFT")
 
-		-- thanks to luigipotato for this function to work properly with "World of Warcraft: Classic Season of Mastery" !!!
-    if C_Seasons ~= nil and C_Seasons.HasActiveSeason() and (C_Seasons.GetActiveSeason() == Enum.SeasonID.SeasonOfMastery) then
-        local roundFactor = 50;
-        if xp < 1000 then
-            roundFactor = 10;
-        end
+local QuestLogExperienceText =
+	QuestLogDetailScrollChildFrame:CreateFontString(
+		"QuestLogExperienceText",
+		"ARTWORK",
+		"QuestFont"
+	)
 
-        xp = floor(xp / roundFactor + 0.5) * roundFactor * 1.4;
-    end
+QuestLogExperienceText:SetShadowOffset(1, -1)
+QuestLogExperienceText:SetJustifyH("LEFT")
 
-	if C_Seasons ~= nil and C_Seasons.HasActiveSeason() and (C_Seasons.GetActiveSeason() == Enum.SeasonID.SeasonOfDiscovery) then
-        local roundFactor = 50;
-        if xp < 1000 then
-            roundFactor = 10;
-        end
+local Slider_minVal =
+	((UnitLevel("player") - 10 > 0 and UnitLevel("player") - 10) or 1)
 
-        xp = floor(xp / roundFactor + 0.5) * roundFactor * 2.5;
-    end
+local Slider_maxVal =
+	((UnitLevel("player") + 10 < maxPlayerLevel and UnitLevel("player") + 10)
+		or (maxPlayerLevel - 1))
 
-    return xp;
-end
+local QuestLogExperienceSlider = CreateSlider(
+	"QuestLogExperienceSlider",
+	QuestLogDetailScrollChildFrame,
+	"",
+	Slider_minVal,
+	Slider_maxVal,
+	1,
+	nil
+)
 
-local QuestLogExperienceTitleText = QuestLogDetailScrollChildFrame:CreateFontString("QuestLogExperienceTitleText", "ARTWORK", "QuestTitleFont")
-QuestLogExperienceTitleText:SetJustifyH ("LEFT")
+-----------------------------------------------------------------------
+-- XP reset button
+-----------------------------------------------------------------------
 
-local QuestLogExperienceText = QuestLogDetailScrollChildFrame:CreateFontString("QuestLogExperienceText", "ARTWORK", "QuestFont")
-QuestLogExperienceText:SetShadowOffset(1,-1)
-QuestLogExperienceText:SetJustifyH ("LEFT")
+local XpResetButton =
+	CreateFrame("Button", nil, QuestLogDetailScrollChildFrame)
 
-local Slider_minVal = ((UnitLevel("player")-10 > 0 and UnitLevel("player")-10) or 1)
-local Slider_maxVal = ((UnitLevel("player")+10 < maxPlayerLevel and UnitLevel("player")+10) or (maxPlayerLevel-1))
-local QuestLogExperienceSlider = CreateSlider("QuestLogExperienceSlider", QuestLogDetailScrollChildFrame, "", Slider_minVal, Slider_maxVal, 1, nil)
-
-local XpResetButton = CreateFrame("Button", nil, QuestLogDetailScrollChildFrame)
 XpResetButton:SetAllPoints(QuestLogExperienceTitleText)
 XpResetButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+
 XpResetButton:SetScript("OnEnter", function(self)
-    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    GameTooltip:AddLine("QuestLogExperience")
-    GameTooltip:AddLine("Left-click: Reset Slider to character level.", 1, 1, 1)
-    GameTooltip:AddLine("Right-click: Set Slider to first level with reduced XP.", 1, 1, 1)
-    GameTooltip:Show()
+	GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+	GameTooltip:AddLine("QuestLogExperience")
+	GameTooltip:AddLine(
+		"Left-click: Reset slider to character level.",
+		1, 1, 1
+	)
+	GameTooltip:AddLine(
+		"Right-click: Set slider to first level with reduced XP.",
+		1, 1, 1
+	)
+	GameTooltip:Show()
 end)
+
 XpResetButton:SetScript("OnLeave", function()
-    GameTooltip:Hide()
+	GameTooltip:Hide()
 end)
+
 XpResetButton:SetScript("OnClick", function(self, btn)
-    if btn == "RightButton" then
-        QuestLogExperienceSlider:SetValue(self.loseLevel)
-        QuestLogExperienceSlider.editbox:ClearFocus()
-    else
-        QuestLogExperienceSlider:SetValue(self.charLevel)
-        QuestLogExperienceSlider.editbox:SetText(self.charLevel)
-        QuestLogExperienceSlider.editbox:ClearFocus()
-    end
+	if btn == "RightButton" then
+		QuestLogExperienceSlider:SetValue(self.loseLevel)
+		QuestLogExperienceSlider.editbox:ClearFocus()
+	else
+		QuestLogExperienceSlider:SetValue(self.charLevel)
+		QuestLogExperienceSlider.editbox:SetText(self.charLevel)
+		QuestLogExperienceSlider.editbox:ClearFocus()
+	end
 end)
 
 if ElvUI then
@@ -237,16 +417,30 @@ if ElvUI then
 	QuestLogExperienceText:SetTextColor(unpack(textColor))
 end
 
+-----------------------------------------------------------------------
+-- Slash commands
+-----------------------------------------------------------------------
+
 local function usage()
-    ChatFrame1:AddMessage(L["|cff0080ffQLE |r/qle |cff0080ffUsage:|r"])
-    ChatFrame1:AddMessage(L["|cff0080ff/qle color|r - Toggle Colored Quest Level Text"])
+	ChatFrame1:AddMessage(
+		L["|cff0080ffQLE |r/qle |cff0080ffUsage:|r"]
+	)
+
+	ChatFrame1:AddMessage(
+		L["|cff0080ff/qle color|r - Toggle Colored Quest Level Text"]
+	)
 end
 
-_G['SLASH_' .. AddOnName .. 1] = '/qle'
-_G['SLASH_' .. AddOnName .. 2] = '/questlogexperience'
+_G["SLASH_" .. AddOnName .. 1] = "/qle"
+_G["SLASH_" .. AddOnName .. 2] = "/questlogexperience"
+
 SlashCmdList[AddOnName] = function(msg)
 	local cmd = ""
-	if msg and type(msg) == "string" then cmd = msg end
+
+	if msg and type(msg) == "string" then
+		cmd = msg
+	end
+
 	if cmd ~= "" then
 		if cmd == "color" or cmd == "colored" then
 			if QuestLogExperienceDB.ColorLevelByDifficulty then
@@ -258,25 +452,50 @@ SlashCmdList[AddOnName] = function(msg)
 			end
 		end
 	else
-		ChatFrame1:AddMessage("|cffffff78QuestLogExperience |r/qle |cffffff78Usage:|r")
-		ChatFrame1:AddMessage("|cffffff78/qle colored|r - Toggle Colored Quest Level Text")
+		ChatFrame1:AddMessage(
+			"|cffffff78QuestLogExperience |r/qle |cffffff78Usage:|r"
+		)
+
+		ChatFrame1:AddMessage(
+			"|cffffff78/qle colored|r - Toggle Colored Quest Level Text"
+		)
 	end
 end
 
-hooksecurefunc('QuestLog_UpdateQuestDetails', function()
+-----------------------------------------------------------------------
+-- Quest Log update
+-----------------------------------------------------------------------
+
+hooksecurefunc("QuestLog_UpdateQuestDetails", function()
 	local questSelected = GetQuestLogSelection()
-	if not questSelected then return end
-	local questTitle, level, questTag, isHeader, isCollapsed, isComplete, frequency, questID, startEvent, displayQuestID, isOnMap, hasLocalPOI, isTask, isBounty, isStory, isHidden, isScaling = GetQuestLogTitle(questSelected)
-	if (not isHeader) and level and questID and (tonumber(level) > 0) and (questID > 0) then
-		local xp, qLevel = LibQuestXP:GetQuestInfo(questID)
+
+	if not questSelected then
+		return
+	end
+
+	local questTitle, level, questTag, isHeader, isCollapsed, isComplete,
+		frequency, questID, startEvent, displayQuestID, isOnMap,
+		hasLocalPOI, isTask, isBounty, isStory, isHidden, isScaling =
+		GetQuestLogTitle(questSelected)
+
+	if (not isHeader)
+		and level
+		and questID
+		and tonumber(level) > 0
+		and questID > 0 then
+
+		local xp, qLevel = GetQuestInfo(questID)
 		local maxXP = GetAdjustedXPByLevel(1, xp, qLevel)
 
 		local LoseLevel = 0
 		local LoseLevelXP = 0
+
 		if xp and qLevel then
-			for i=1, 10 do
-				local testlevel = qLevel+i
-				local curXP = GetAdjustedXPByLevel(testlevel, xp, qLevel)
+			for i = 1, 10 do
+				local testlevel = qLevel + i
+				local curXP =
+					GetAdjustedXPByLevel(testlevel, xp, qLevel)
+
 				if curXP < maxXP then
 					LoseLevel = testlevel
 					LoseLevelXP = curXP
@@ -286,75 +505,211 @@ hooksecurefunc('QuestLog_UpdateQuestDetails', function()
 		end
 
 		local questXP = GetQuestLogRewardXP()
-		if ((not questXP) or (questXP == 0)) then questXP = GetQuestLogRewardXP(questID) end
+
+		if (not questXP) or questXP == 0 then
+			questXP = GetQuestLogRewardXP(questID)
+		end
 
 		if questXP > 0 then
-			if C_Seasons ~= nil and C_Seasons.HasActiveSeason() and (C_Seasons.GetActiveSeason() == Enum.SeasonID.SeasonOfDiscovery) then
-				questXP = questXP * 2.5;
+			if C_Seasons ~= nil
+				and C_Seasons.HasActiveSeason()
+				and C_Seasons.GetActiveSeason() == Enum.SeasonID.SeasonOfDiscovery then
+
+				questXP = questXP * 2.5
 			end
+
 			QuestLogExperienceTitleText:SetText(gExperience)
+
 			QuestLogExperienceTitleText:ClearAllPoints()
-			QuestLogExperienceTitleText:SetPoint("TOPLEFT", QuestLogQuestDescription, "BOTTOMLEFT", 0, -15)
+
+			QuestLogExperienceTitleText:SetPoint(
+				"TOPLEFT",
+				QuestLogQuestDescription,
+				"BOTTOMLEFT",
+				0,
+				-15
+			)
 
 			local PlayerCurXP = UnitXP("player")
 			local PlayerMaxXP = UnitXPMax("player")
-			local charLevel = UnitLevel("player");
-			local QuestXPPerc = questXP / (PlayerMaxXP / 100)
+			local charLevel = UnitLevel("player")
+
+			local QuestXPPerc =
+				questXP / (PlayerMaxXP / 100)
+
 			if LoseLevel < charLevel then
-				Slider_minVal = (LoseLevel-10 > 0 and LoseLevel-10) or 1
-				Slider_maxVal = (charLevel < maxPlayerLevel and charLevel) or (maxPlayerLevel-1)
+				Slider_minVal =
+					(LoseLevel - 10 > 0 and LoseLevel - 10) or 1
+
+				Slider_maxVal =
+					(charLevel < maxPlayerLevel and charLevel)
+					or (maxPlayerLevel - 1)
 			else
-				Slider_minVal = (UnitLevel("player")-10 > 0 and UnitLevel("player")-10) or 1
-				Slider_maxVal = (LoseLevel+4 < maxPlayerLevel and LoseLevel+4) or (maxPlayerLevel-1)
+				Slider_minVal =
+					(UnitLevel("player") - 10 > 0
+						and UnitLevel("player") - 10)
+					or 1
+
+				Slider_maxVal =
+					(LoseLevel + 4 < maxPlayerLevel
+						and LoseLevel + 4)
+					or (maxPlayerLevel - 1)
 			end
 
 			QuestLogExperienceText:ClearAllPoints()
-			QuestLogExperienceText:SetPoint("TOPLEFT", QuestLogExperienceTitleText, "BOTTOMLEFT", 0, -5)
+
+			QuestLogExperienceText:SetPoint(
+				"TOPLEFT",
+				QuestLogExperienceTitleText,
+				"BOTTOMLEFT",
+				0,
+				-5
+			)
 
 			-- Slider
 			QuestLogExperienceSlider:ClearAllPoints()
-			QuestLogExperienceSlider:SetPoint("TOPLEFT", QuestLogExperienceText, "BOTTOMLEFT", 0, -2);
-			QuestLogExperienceSlider:SetMinMaxValues(Slider_minVal, Slider_maxVal)
-			QuestLogExperienceSlider.textLow:SetText(floor(Slider_minVal))
-			QuestLogExperienceSlider.textHigh:SetText(floor(Slider_maxVal))
+
+			QuestLogExperienceSlider:SetPoint(
+				"TOPLEFT",
+				QuestLogExperienceText,
+				"BOTTOMLEFT",
+				0,
+				-2
+			)
+
+			QuestLogExperienceSlider:SetMinMaxValues(
+				Slider_minVal,
+				Slider_maxVal
+			)
+
+			QuestLogExperienceSlider.textLow:SetText(
+				floor(Slider_minVal)
+			)
+
+			QuestLogExperienceSlider.textHigh:SetText(
+				floor(Slider_maxVal)
+			)
+
 			QuestLogExperienceSlider.editbox:ClearFocus()
 			QuestLogExperienceSlider:SetValue(charLevel)
 
 			XpResetButton.charLevel = charLevel
 			XpResetButton.loseLevel = LoseLevel
 
-			local diffcolor = GetRelativeDifficultyColor(charLevel, level)
-			local coloredlevel = charLevel
-			local colortext = gLevel.." "..charLevel..": "..questXP.." ("..round(QuestXPPerc, 2).."%)"
-			if QuestLogExperienceDB.ColorLevelByDifficulty then
-				coloredlevel = format("\124cff%.2x%.2x%.2x%d\124r", diffcolor.r*255, diffcolor.g*255, diffcolor.b*255, charLevel)
-				colortext = format("\124cff%.2x%.2x%.2x%s\124r", diffcolor.r*255, diffcolor.g*255, diffcolor.b*255, colortext)
-			end
-			QuestLogExperienceText:SetText(colortext);
+			local diffcolor =
+				GetRelativeDifficultyColor(charLevel, level)
 
-			QuestLogExperienceSlider:SetScript("OnValueChanged", function(self, value)
-				local slider_questXP = GetAdjustedXPByLevel(value, xp, qLevel)
-				local slider_PlayerMaxXP = UnitXPMax("player")
-				local slider_XPPerc = slider_questXP / (slider_PlayerMaxXP / 100)
-				diffcolor = GetRelativeDifficultyColor(value, level)
-				coloredlevel = value
-				colortext = gLevel.." "..value..": "..slider_questXP.." ("..round(slider_XPPerc, 2).."%)"
-				if QuestLogExperienceDB.ColorLevelByDifficulty then
-					coloredlevel = format("\124cff%.2x%.2x%.2x%d\124r", diffcolor.r*255, diffcolor.g*255, diffcolor.b*255, value)
-					colortext = format("\124cff%.2x%.2x%.2x%s\124r", diffcolor.r*255, diffcolor.g*255, diffcolor.b*255, colortext)
+			local coloredlevel = charLevel
+
+			local colortext =
+				gLevel .. " " ..
+				charLevel ..
+				": " ..
+				questXP ..
+				" (" ..
+				round(QuestXPPerc, 2) ..
+				"%)"
+
+			if QuestLogExperienceDB.ColorLevelByDifficulty then
+				coloredlevel =
+					format(
+						"\124cff%.2x%.2x%.2x%d\124r",
+						diffcolor.r * 255,
+						diffcolor.g * 255,
+						diffcolor.b * 255,
+						charLevel
+					)
+
+				colortext =
+					format(
+						"\124cff%.2x%.2x%.2x%s\124r",
+						diffcolor.r * 255,
+						diffcolor.g * 255,
+						diffcolor.b * 255,
+						colortext
+					)
+			end
+
+			QuestLogExperienceText:SetText(colortext)
+
+			QuestLogExperienceSlider:SetScript(
+				"OnValueChanged",
+				function(self, value)
+					local slider_questXP =
+						GetAdjustedXPByLevel(
+							value,
+							xp,
+							qLevel
+						)
+
+					local slider_PlayerMaxXP =
+						UnitXPMax("player")
+
+					local slider_XPPerc =
+						slider_questXP /
+						(slider_PlayerMaxXP / 100)
+
+					diffcolor =
+						GetRelativeDifficultyColor(value, level)
+
+					coloredlevel = value
+
+					colortext =
+						gLevel ..
+						" " ..
+						value ..
+						": " ..
+						slider_questXP ..
+						" (" ..
+						round(slider_XPPerc, 2) ..
+						"%)"
+
+					if QuestLogExperienceDB.ColorLevelByDifficulty then
+						coloredlevel =
+							format(
+								"\124cff%.2x%.2x%.2x%d\124r",
+								diffcolor.r * 255,
+								diffcolor.g * 255,
+								diffcolor.b * 255,
+								value
+							)
+
+						colortext =
+							format(
+								"\124cff%.2x%.2x%.2x%s\124r",
+								diffcolor.r * 255,
+								diffcolor.g * 255,
+								diffcolor.b * 255,
+								colortext
+							)
+					end
+
+					QuestLogExperienceText:SetText(colortext)
 				end
-				QuestLogExperienceText:SetText(colortext);
-			end)
+			)
 
 			QuestLogExperienceTitleText:Show()
 			QuestLogExperienceText:Show()
 			QuestLogExperienceSlider:Show()
-			QuestFrame_SetAsLastShown(QuestLogExperienceSlider)
+
+			QuestFrame_SetAsLastShown(
+				QuestLogExperienceSlider
+			)
 
 			if QuestLogRewardTitleText:IsShown() then
 				QuestLogRewardTitleText:ClearAllPoints()
-				QuestLogRewardTitleText:SetPoint(QLRTT_point, QuestLogExperienceSlider, QLRTT_relativePoint, QLRTT_xOfs, QLRTT_yOfs-10)
-				QuestFrame_SetAsLastShown(QuestLogRewardTitleText)
+
+				QuestLogRewardTitleText:SetPoint(
+					QLRTT_point,
+					QuestLogExperienceSlider,
+					QLRTT_relativePoint,
+					QLRTT_xOfs,
+					QLRTT_yOfs - 10
+				)
+
+				QuestFrame_SetAsLastShown(
+					QuestLogRewardTitleText
+				)
 			end
 		else
 			QuestLogExperienceTitleText:Hide()
@@ -363,8 +718,18 @@ hooksecurefunc('QuestLog_UpdateQuestDetails', function()
 
 			if QuestLogRewardTitleText:IsShown() then
 				QuestLogRewardTitleText:ClearAllPoints()
-				QuestLogRewardTitleText:SetPoint(QLRTT_point, QLRTT_relativeTo, QLRTT_relativePoint, QLRTT_xOfs, QLRTT_yOfs)
-				QuestFrame_SetAsLastShown(QuestLogRewardTitleText)
+
+				QuestLogRewardTitleText:SetPoint(
+					QLRTT_point,
+					QLRTT_relativeTo,
+					QLRTT_relativePoint,
+					QLRTT_xOfs,
+					QLRTT_yOfs
+				)
+
+				QuestFrame_SetAsLastShown(
+					QuestLogRewardTitleText
+				)
 			end
 		end
 	end
